@@ -11,11 +11,9 @@ namespace RGN.Modules
     public class GoogleSignInModule : IRGNModule
     {
         private IRGNRolesCore rgnCore;
-        private string webClientId;
 
-        public GoogleSignInModule(string webClientId)
+        public GoogleSignInModule()
         {
-            this.webClientId = webClientId;
         }
 
         public void SetRGNCore(IRGNRolesCore rgnCore)
@@ -27,12 +25,13 @@ namespace RGN.Modules
         {
             GoogleSignIn.Configuration = new GoogleSignInConfiguration
             {
-                WebClientId = webClientId,
+                WebClientId = rgnCore.Dependencies.ApplicationStore.GetGoogleSignInWebClientID,
                 UseGameSignIn = false,
                 RequestEmail = true,
                 RequestIdToken = true
             };
         }
+        public void Dispose() { }
 
         public void SignOutFromGoogle()
         {
@@ -107,9 +106,9 @@ namespace RGN.Modules
 
         private void LinkGoogleAccountToFirebase(string idToken)
         {
-            var credential = rgnCore.readyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
+            var credential = rgnCore.ReadyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
 
-            rgnCore.auth.CurrentUser.LinkAndRetrieveDataWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
+            rgnCore.Auth.CurrentUser.LinkAndRetrieveDataWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
             {
                 if (task.IsCanceled)
                 {
@@ -145,9 +144,9 @@ namespace RGN.Modules
                     return;
                 }
 
-                Debug.Log("[GoogleSignInModule]: LinkWith Google Successful. " + rgnCore.auth.CurrentUser.UserId + " ");
+                Debug.Log("[GoogleSignInModule]: LinkWith Google Successful. " + rgnCore.Auth.CurrentUser.UserId + " ");
                 
-                rgnCore.auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
+                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
                 {
                     if (taskAuth.IsCanceled)
                     {
@@ -175,9 +174,9 @@ namespace RGN.Modules
 
         private void SignInWithGoogleOnFirebase(string idToken)
         {
-            var credential = rgnCore.readyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
+            var credential = rgnCore.ReadyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
 
-            rgnCore.auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
+            rgnCore.Auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
             {
                 if (task.IsCanceled)
                 {
@@ -194,7 +193,7 @@ namespace RGN.Modules
 
                 Debug.Log("[GoogleSignInModule]: GOOGLE, signed in");
                 
-                rgnCore.auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
+                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
                 {
                     Debug.Log("[GoogleSignInModule]: GOOGLE, userToken " + taskAuth.Result);
                     
@@ -202,7 +201,7 @@ namespace RGN.Modules
                     {
                         Debug.Log("[GoogleSignInModule]: GOOGLE, masterToken " + taskCustom.Result);
                         
-                        rgnCore.readyMasterAuth.SignInWithCustomTokenAsync(taskCustom.Result);
+                        rgnCore.ReadyMasterAuth.SignInWithCustomTokenAsync(taskCustom.Result);
                     });
                 });
             });
