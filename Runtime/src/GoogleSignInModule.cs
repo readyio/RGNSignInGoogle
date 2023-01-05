@@ -71,7 +71,7 @@ namespace RGN.Modules
 
                 if (isLink)
                 {
-                    rgnCore.IsUserCanBeLinked(task.Result.Email).ContinueWithOnMainThread(checkLinkResult =>
+                    rgnCore.IsUserCanBeLinkedAsync(task.Result.Email).ContinueWithOnMainThread(checkLinkResult =>
                     {
                         if (checkLinkResult.IsCanceled)
                         {
