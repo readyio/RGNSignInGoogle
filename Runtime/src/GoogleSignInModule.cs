@@ -6,9 +6,9 @@ using Firebase.Extensions;
 using Google;
 using UnityEngine;
 
-namespace RGN.Modules
+namespace RGN.Modules.SignIn
 {
-    public class GoogleSignInModule : IRGNModule
+    public class GoogleSignInModule : BaseModule<GoogleSignInModule>, IRGNModule
     {
         private IRGNRolesCore rgnCore;
 
