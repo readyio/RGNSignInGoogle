@@ -23,8 +23,7 @@ namespace RGN.Modules.SignIn
 
         public void Init()
         {
-            GoogleSignIn.Configuration = new GoogleSignInConfiguration
-            {
+            GoogleSignIn.Configuration = new GoogleSignInConfiguration {
                 WebClientId = rgnCore.Dependencies.ApplicationStore.GetGoogleSignInWebClientID,
                 UseGameSignIn = false,
                 RequestEmail = true,
@@ -43,8 +42,7 @@ namespace RGN.Modules.SignIn
         {
             Debug.Log($"[GoogleSignInModule]: GOOGLE, login started");
 
-            GoogleSignIn.DefaultInstance.SignIn().ContinueWithOnMainThread(task =>
-            {
+            GoogleSignIn.DefaultInstance.SignIn().ContinueWithOnMainThread(task => {
                 if (task.IsCanceled)
                 {
                     rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.Unknown);
@@ -53,11 +51,12 @@ namespace RGN.Modules.SignIn
 
                 if (task.IsFaulted)
                 {
+                    Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, task.Exception);
                     using (IEnumerator<Exception> enumerator = task.Exception.InnerExceptions.GetEnumerator())
                     {
                         while (enumerator.MoveNext())
                         {
-                            var error = (GoogleSignIn.SignInException) enumerator.Current;
+                            var error = (GoogleSignIn.SignInException)enumerator.Current;
                             Debug.Log("[GoogleSignInModule]: GOOGLE, login ERROR " + error.Status + " " +
                                       error.Message);
                         }
@@ -71,29 +70,29 @@ namespace RGN.Modules.SignIn
 
                 if (isLink)
                 {
-                    rgnCore.IsUserCanBeLinkedAsync(task.Result.Email).ContinueWithOnMainThread(checkLinkResult =>
-                    {
+                    rgnCore.IsUserCanBeLinkedAsync(task.Result.Email).ContinueWithOnMainThread(checkLinkResult => {
                         if (checkLinkResult.IsCanceled)
                         {
                             SignOutFromGoogle();
                             return;
                         }
-                    
+
                         if (checkLinkResult.IsFaulted)
                         {
+                            Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, checkLinkResult.Exception);
                             rgnCore.SignOutRGN();
                             rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.Unknown);
                             return;
                         }
 
-                        bool canBeLinked = (bool) checkLinkResult.Result.Data;
+                        bool canBeLinked = (bool)checkLinkResult.Result.Data;
                         if (!canBeLinked)
                         {
                             OnSignOutGoogle();
                             rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.AccountAlreadyLinked);
                             return;
                         }
-                        
+
                         LinkGoogleAccountToFirebase(task.Result.IdToken);
                     });
                 }
@@ -108,16 +107,16 @@ namespace RGN.Modules.SignIn
         {
             var credential = rgnCore.ReadyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
 
-            rgnCore.Auth.CurrentUser.LinkAndRetrieveDataWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
-            {
+            rgnCore.Auth.CurrentUser.LinkAndRetrieveDataWithCredentialAsync(credential).ContinueWithOnMainThread(task => {
                 if (task.IsCanceled)
                 {
                     OnSignOutGoogle();
                     return;
                 }
-                
+
                 if (task.IsFaulted)
                 {
+                    Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, task.Exception);
                     FirebaseAccountLinkException firebaseAccountLinkException = task.Exception.InnerException as FirebaseAccountLinkException;
                     if (firebaseAccountLinkException != null && firebaseAccountLinkException.ErrorCode == (int)AuthError.CredentialAlreadyInUse)
                     {
@@ -133,7 +132,7 @@ namespace RGN.Modules.SignIn
                         rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.AccountAlreadyLinked);
                         return;
                     }
-                    
+
                     foreach (Exception exception in task.Exception.Flatten().InnerExceptions)
                     {
                         Debug.Log(exception.GetType() + " - " + exception.Message + " - " + exception.Source);
@@ -145,9 +144,8 @@ namespace RGN.Modules.SignIn
                 }
 
                 Debug.Log("[GoogleSignInModule]: LinkWith Google Successful. " + rgnCore.Auth.CurrentUser.UserId + " ");
-                
-                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
-                {
+
+                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => {
                     if (taskAuth.IsCanceled)
                     {
                         SignOutFromGoogle();
@@ -155,17 +153,17 @@ namespace RGN.Modules.SignIn
                     }
                     if (taskAuth.IsFaulted)
                     {
+                        Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, taskAuth.Exception);
                         rgnCore.SignOutRGN();
                         rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.Unknown);
                         return;
                     }
 
                     Debug.Log("[GoogleSignInModule]: GOOGLE, userToken " + taskAuth.Result);
-                    
-                    rgnCore.LinkWithProviderAsync(false, taskAuth.Result).ContinueWithOnMainThread(taskLink => 
-                    {
+
+                    rgnCore.LinkWithProviderAsync(false, taskAuth.Result).ContinueWithOnMainThread(taskLink => {
                         Debug.Log("[GoogleSignInModule]: GOOGLE, linked");
-                        
+
                         rgnCore.SetAuthCompletion(EnumLoginState.Success, EnumLoginError.Ok);
                     });
                 });
@@ -176,31 +174,29 @@ namespace RGN.Modules.SignIn
         {
             var credential = rgnCore.ReadyMasterAuth.googleAuthProvider.GetCredential(idToken, null);
 
-            rgnCore.Auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task => 
-            {
+            rgnCore.Auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task => {
                 if (task.IsCanceled)
                 {
                     SignOutFromGoogle();
                     return;
                 }
-                
+
                 if (task.IsFaulted)
                 {
+                    Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, task.Exception);
                     SignOutFromGoogle();
                     rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.Unknown);
                     return;
                 }
 
                 Debug.Log("[GoogleSignInModule]: GOOGLE, signed in");
-                
-                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => 
-                {
+
+                rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => {
                     Debug.Log("[GoogleSignInModule]: GOOGLE, userToken " + taskAuth.Result);
-                    
-                    rgnCore.CreateCustomTokenAsync(taskAuth.Result).ContinueWith(taskCustom => 
-                    {
+
+                    rgnCore.CreateCustomTokenAsync(taskAuth.Result).ContinueWith(taskCustom => {
                         Debug.Log("[GoogleSignInModule]: GOOGLE, masterToken " + taskCustom.Result);
-                        
+
                         rgnCore.ReadyMasterAuth.SignInWithCustomTokenAsync(taskCustom.Result);
                     });
                 });
