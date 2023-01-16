@@ -126,10 +126,17 @@ namespace RGN.Modules.SignIn
                     }
 
                     FirebaseException firebaseException = task.Exception.InnerException as FirebaseException;
-                    if (firebaseException != null && firebaseException.ErrorCode == (int)AuthError.EmailAlreadyInUse)
+                    
+                    if (firebaseException != null)
                     {
+                        EnumLoginError loginError = (AuthError)firebaseException.ErrorCode switch {
+                            AuthError.EmailAlreadyInUse => EnumLoginError.AccountAlreadyLinked,
+                            AuthError.RequiresRecentLogin => EnumLoginError.AccountNeedsRecentLogin,
+                            _ => EnumLoginError.Unknown
+                        };
+
                         OnSignOutGoogle();
-                        rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.AccountAlreadyLinked);
+                        rgnCore.SetAuthCompletion(EnumLoginState.Error, loginError);
                         return;
                     }
 
