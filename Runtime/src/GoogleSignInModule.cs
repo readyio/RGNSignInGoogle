@@ -24,7 +24,11 @@ namespace RGN.Modules.SignIn
         public void Init()
         {
             GoogleSignIn.Configuration = new GoogleSignInConfiguration {
-                WebClientId = rgnCore.Dependencies.ApplicationStore.GetGoogleSignInWebClientID,
+#if UNITY_IOS
+                WebClientId = rgnCore.Dependencies.ApplicationStore.GetGoogleSignInWebClientIdiOS,
+#else
+                WebClientId = rgnCore.Dependencies.ApplicationStore.GetGoogleSignInWebClientIdAndroid,
+#endif
                 UseGameSignIn = false,
                 RequestEmail = true,
                 RequestIdToken = true
