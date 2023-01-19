@@ -32,13 +32,13 @@ namespace RGN.Modules.SignIn
         }
         public void Dispose() { }
 
-        public void SignOutFromGoogle()
+        public void SignOut()
         {
             OnSignOutGoogle();
             rgnCore.SignOutRGN();
         }
 
-        public void OnSignInGoogle(bool isLink = false)
+        public void TryToSignIn(bool tryToLinkToCurrentAccount = false)
         {
             Debug.Log($"[GoogleSignInModule]: GOOGLE, login started");
 
@@ -68,12 +68,12 @@ namespace RGN.Modules.SignIn
 
                 Debug.Log($"[GoogleSignInModule]: GOOGLE, login SUCCESS {task.Result.DisplayName}||{task.Result.Email}||{task.Result.IdToken}");
 
-                if (isLink)
+                if (tryToLinkToCurrentAccount)
                 {
-                    rgnCore.IsUserCanBeLinkedAsync(task.Result.Email).ContinueWithOnMainThread(checkLinkResult => {
+                    rgnCore.CanTheUserBeLinkedAsync(task.Result.Email).ContinueWithOnMainThread(checkLinkResult => {
                         if (checkLinkResult.IsCanceled)
                         {
-                            SignOutFromGoogle();
+                            SignOut();
                             return;
                         }
 
@@ -88,6 +88,7 @@ namespace RGN.Modules.SignIn
                         bool canBeLinked = (bool)checkLinkResult.Result.Data;
                         if (!canBeLinked)
                         {
+                            rgnCore.Dependencies.Logger.LogError("[GoogleSignInModule]: The User can not be linked");
                             OnSignOutGoogle();
                             rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.AccountAlreadyLinked);
                             return;
@@ -126,7 +127,7 @@ namespace RGN.Modules.SignIn
                     }
 
                     FirebaseException firebaseException = task.Exception.InnerException as FirebaseException;
-                    
+
                     if (firebaseException != null)
                     {
                         EnumLoginError loginError = (AuthError)firebaseException.ErrorCode switch {
@@ -155,7 +156,7 @@ namespace RGN.Modules.SignIn
                 rgnCore.Auth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(taskAuth => {
                     if (taskAuth.IsCanceled)
                     {
-                        SignOutFromGoogle();
+                        SignOut();
                         return;
                     }
                     if (taskAuth.IsFaulted)
@@ -184,14 +185,14 @@ namespace RGN.Modules.SignIn
             rgnCore.Auth.SignInWithCredentialAsync(credential).ContinueWithOnMainThread(task => {
                 if (task.IsCanceled)
                 {
-                    SignOutFromGoogle();
+                    SignOut();
                     return;
                 }
 
                 if (task.IsFaulted)
                 {
                     Utility.ExceptionHelper.PrintToLog(rgnCore.Dependencies.Logger, task.Exception);
-                    SignOutFromGoogle();
+                    SignOut();
                     rgnCore.SetAuthCompletion(EnumLoginState.Error, EnumLoginError.Unknown);
                     return;
                 }
